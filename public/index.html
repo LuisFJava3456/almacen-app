@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AlmacénApp</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    
+    :root {
+      --bg:         #0b0f1a;
+      --surface:    #131824;
+      --surface2:   #1a2030;
+      --border:     #252d3d;
+      --accent:     #f59e0b;
+      --accent-dim: #b97a0a;
+      --text:       #e8ecf4;
+      --text-muted: #6b7a99;
+      --danger:     #ef4444;
+      --success:    #22c55e;
+      --sidebar-w:  240px;
+      --font-head:  'Barlow Condensed', sans-serif;
+      --font-mono:  'IBM Plex Mono', monospace;
+      --font-body:  'Barlow', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      overflow: hidden;
+    }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: var(--surface); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    #sidebar {
+      width: var(--sidebar-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+    #sidebar::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+    }
+
+    .sidebar-logo {
+      padding: 24px 20px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo .logo-mark {
+      font-family: var(--font-head);
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text);
+      line-height: 1;
+    }
+    .sidebar-logo .logo-mark span { color: var(--accent); }
+    .sidebar-logo .logo-sub {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    .nav-section {
+      padding: 16px 12px 6px;
+    }
+    .nav-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 0 8px;
+      margin-bottom: 6px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: all 0.18s ease;
+      user-select: none;
+      border: 1px solid transparent;
+    }
+    .nav-item:hover {
+      background: var(--surface2);
+      color: var(--text);
+      border-color: var(--border);
+    }
+    .nav-item.active {
+      background: rgba(245,158,11,0.12);
+      color: var(--accent);
+      border-color: rgba(245,158,11,0.25);
+    }
+    .nav-item .nav-icon {
+      font-size: 15px;
+      width: 18px;
+      text-align: center;
+    }
+    .nav-item.disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+    }
+    .sidebar-footer .version {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+    .status-dot {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+      margin-right: 6px;
+      animation: pulse 2s infinite;
+    }
+    .status-dot.offline { background: var(--danger); animation: none; }
+    @keyframes pulse {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0.4; }
+    }
+
+    /* ── Main ──────────────────────────────────────────────────── */
+    #main {
+      flex: 1;
+      height: 100vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Top bar ───────────────────────────────────────────────── */
+    #topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .topbar-title {
+      font-family: var(--font-head);
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .topbar-right {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    #content {
+      flex: 1;
+      padding: 28px;
+    }
+
+    .view { display: none; animation: fadeIn 0.2s ease; }
+    .view.active { display: block; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .section-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      gap: 16px;
+    }
+    .section-title {
+      font-family: var(--font-head);
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+    .section-title span {
+      display: block;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-weight: 400;
+      margin-bottom: 4px;
+    }
+    .count-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      background: rgba(245,158,11,0.12);
+      color: var(--accent);
+      border: 1px solid rgba(245,158,11,0.3);
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-head);
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    /* ── Form ──────────────────────────────────────────────────── */
+    .form-grid {
+      display: grid;
+      gap: 14px;
+      padding: 20px;
+    }
+    .form-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+    .form-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .form-row {
+      display: flex;
+      gap: 14px;
+      align-items: flex-end;
+      padding: 20px;
+    }
+    label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      display: block;
+      margin-bottom: 6px;
+    }
+    input, textarea, select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 14px;
+      padding: 9px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--accent);
+    }
+    textarea { resize: vertical; min-height: 70px; }
+    .field { flex: 1; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 18px;
+      border-radius: 6px;
+      font-family: var(--font-head);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+    }
+    .btn-primary:hover { background: #fbbf24; transform: translateY(-1px); }
+    .btn-primary:active { transform: none; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--text-muted); }
+    .btn-danger {
+      background: transparent;
+      color: var(--danger);
+      border: 1px solid transparent;
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+    .btn-danger:hover { background: rgba(239,68,68,0.1); border-color: var(--danger); }
+    .btn-edit {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid transparent;
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+    .btn-edit:hover { background: var(--surface2); color: var(--accent); }
+
+    /* ── Table ─────────────────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+    thead th {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 10px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.12s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2); }
+    tbody td {
+      padding: 11px 16px;
+      vertical-align: middle;
+    }
+    .id-cell {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .actions-cell { display: flex; gap: 4px; }
+
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .toast-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--success);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: var(--font-body);
+      max-width: 280px;
+      animation: slideIn 0.25s ease;
+    }
+    .toast-item.error { border-left-color: var(--danger); }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    .empty-state {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--text-muted);
+    }
+    .empty-state .empty-icon { font-size: 36px; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; }
+
+    .loading {
+      text-align: center;
+      padding: 32px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+      letter-spacing: 2px;
+    }
+
+    .dash-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.18s;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent);
+      transform: scaleX(0);
+      transition: transform 0.2s;
+      transform-origin: left;
+    }
+    .stat-card:hover::after { transform: scaleX(1); }
+    .stat-card:hover { border-color: rgba(245,158,11,0.3); }
+    .stat-icon { font-size: 24px; margin-bottom: 12px; }
+    .stat-value {
+      font-family: var(--font-head);
+      font-size: 36px;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--accent);
+    }
+    .stat-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+    .welcome-banner {
+      background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, transparent 60%);
+      border: 1px solid rgba(245,158,11,0.2);
+      border-radius: 10px;
+      padding: 24px 28px;
+      margin-bottom: 28px;
+    }
+    .welcome-banner h2 {
+      font-family: var(--font-head);
+      font-size: 26px;
+      font-weight: 800;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .welcome-banner p {
+      font-size: 14px;
+      color: var(--text-muted);
+      max-width: 520px;
+    }
+    .coming-soon {
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      padding: 60px 20px;
+      text-align: center;
+    }
+    .coming-soon .cs-icon { font-size: 48px; margin-bottom: 16px; }
+    .coming-soon h3 {
+      font-family: var(--font-head);
+      font-size: 22px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .coming-soon p {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+  </style>
+</head>
+<body>
+
+<aside id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">Almacén<span>App</span></div>
+    <div class="logo-sub">Sistema de Gestión</div>
+  </div>
+
+  <nav>
+    <div class="nav-section">
+      <div class="nav-label">Principal</div>
+      <div class="nav-item active" onclick="navigate('home')" data-view="home">
+        <span class="nav-icon">⬡</span> Dashboard
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Catálogos</div>
+      <div class="nav-item" onclick="navigate('conceptos')" data-view="conceptos">
+        <span class="nav-icon">◈</span> Conceptos
+      </div>
+      <div class="nav-item" onclick="navigate('destinos')" data-view="destinos">
+        <span class="nav-icon">◉</span> Destinos
+      </div>
+      <div class="nav-item" onclick="navigate('productos')" data-view="productos">
+        <span class="nav-icon">◫</span> Productos
+      </div>
+      <div class="nav-item" onclick="navigate('unidades')" data-view="unidades">
+        <span class="nav-icon">◱</span> Unidades de Medida
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Documentos</div>
+      <div class="nav-item" onclick="navigate('entradas')" data-view="entradas">
+        <span class="nav-icon">↓</span> Entradas
+      </div>
+      <div class="nav-item" onclick="navigate('salidas')" data-view="salidas">
+        <span class="nav-icon">↑</span> Salidas
+      </div>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="version">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Conectando...</span>
+    </div>
+  </div>
+</aside>
+
+<div id="main">
+  <header id="topbar">
+    <div class="topbar-title" id="topbarTitle">Dashboard</div>
+    <div class="topbar-right" id="topbarDate"></div>
+  </header>
+
+  <div id="content">
+
+    <div class="view active" id="view-home">
+      <div class="welcome-banner">
+        <h2>Bienvenido al sistema</h2>
+        <p>Gestión de catálogos del almacén. Selecciona un módulo en el menú lateral para comenzar.</p>
+      </div>
+      <div class="dash-grid" id="dashStats">
+        <div class="stat-card" onclick="navigate('conceptos')">
+          <div class="stat-icon">◈</div>
+          <div class="stat-value" id="cnt-conceptos">—</div>
+          <div class="stat-label">Conceptos</div>
+        </div>
+        <div class="stat-card" onclick="navigate('destinos')">
+          <div class="stat-icon">◉</div>
+          <div class="stat-value" id="cnt-destinos">—</div>
+          <div class="stat-label">Destinos</div>
+        </div>
+        <div class="stat-card" onclick="navigate('productos')">
+          <div class="stat-icon">◫</div>
+          <div class="stat-value" id="cnt-productos">—</div>
+          <div class="stat-label">Productos</div>
+        </div>
+        <div class="stat-card" onclick="navigate('unidades')">
+          <div class="stat-icon">◱</div>
+          <div class="stat-value" id="cnt-unidades">—</div>
+          <div class="stat-label">Unidades</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CONCEPTOS ────────────────────────────────────────────────── -->
+    <div class="view" id="view-conceptos">
+      <div class="section-header">
+        <div class="section-title">
+          <span>Catálogo /</span>
+          Conceptos
+        </div>
+        <span class="count-badge" id="badge-conceptos">0 registros</span>
+      </div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header">Nuevo Concepto</div>
+        <div class="form-grid cols-2">
+          <div class="field">
+            <label>Nombre *</label>
+            <input type="text" id="c-nombre" placeholder="Ej. Entrada por compra" />
+          </div>
+          <div class="field">
+            <label>Descripción</label>
+            <input type="text" id="c-descripcion" placeholder="Descripción breve..." />
+          </div>
+        </div>
+        <div style="padding:0 20px 20px;display:flex;gap:10px">
+          <button class="btn btn-primary" onclick="saveConcepto()">＋ Guardar</button>
+          <button class="btn btn-ghost" onclick="clearForm('c')">Limpiar</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">Registros</div>
+        <div class="table-wrap">
+          <div class="loading" id="loading-conceptos">CARGANDO...</div>
+          <table id="table-conceptos" style="display:none">
+            <thead><tr>
+              <th>#</th><th>Nombre</th><th>Descripción</th><th>Creado</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="tbody-conceptos"></tbody>
+          </table>
+          <div class="empty-state" id="empty-conceptos" style="display:none">
+            <div class="empty-icon">◈</div><p>Sin registros aún.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DESTINOS ──────────────────────────────────────────────────── -->
+    <div class="view" id="view-destinos">
+      <div class="section-header">
+        <div class="section-title"><span>Catálogo /</span>Destinos</div>
+        <span class="count-badge" id="badge-destinos">0 registros</span>
+      </div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header">Nuevo Destino</div>
+        <div class="form-grid cols-3">
+          <div class="field">
+            <label>Nombre *</label>
+            <input type="text" id="d-nombre" placeholder="Nombre del destino" />
+          </div>
+          <div class="field">
+            <label>Ciudad</label>
+            <input type="text" id="d-ciudad" placeholder="Ej. Manzanillo" />
+          </div>
+          <div class="field">
+            <label>Estado</label>
+            <input type="text" id="d-estado" placeholder="Ej. Colima" />
+          </div>
+        </div>
+        <div style="padding:0 20px 20px;display:flex;gap:10px">
+          <button class="btn btn-primary" onclick="saveDestino()">＋ Guardar</button>
+          <button class="btn btn-ghost" onclick="clearForm('d')">Limpiar</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">Registros</div>
+        <div class="table-wrap">
+          <div class="loading" id="loading-destinos">CARGANDO...</div>
+          <table id="table-destinos" style="display:none">
+            <thead><tr>
+              <th>#</th><th>Nombre</th><th>Ciudad</th><th>Estado</th><th>Creado</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="tbody-destinos"></tbody>
+          </table>
+          <div class="empty-state" id="empty-destinos" style="display:none">
+            <div class="empty-icon">◉</div><p>Sin registros aún.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="view-productos">
+      <div class="section-header">
+        <div class="section-title"><span>Catálogo /</span>Productos</div>
+        <span class="count-badge" id="badge-productos">0 registros</span>
+      </div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header">Nuevo Producto</div>
+        <div class="form-grid cols-3">
+          <div class="field">
+            <label>Nombre *</label>
+            <input type="text" id="p-nombre" placeholder="Nombre del producto" />
+          </div>
+          <div class="field">
+            <label>Descripción</label>
+            <input type="text" id="p-descripcion" placeholder="Descripción..." />
+          </div>
+          <div class="field">
+            <label>Precio</label>
+            <input type="number" id="p-precio" placeholder="0.00" step="0.01" min="0" />
+          </div>
+        </div>
+        <div style="padding:0 20px 20px;display:flex;gap:10px">
+          <button class="btn btn-primary" onclick="saveProducto()">＋ Guardar</button>
+          <button class="btn btn-ghost" onclick="clearForm('p')">Limpiar</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">Registros</div>
+        <div class="table-wrap">
+          <div class="loading" id="loading-productos">CARGANDO...</div>
+          <table id="table-productos" style="display:none">
+            <thead><tr>
+              <th>#</th><th>Nombre</th><th>Descripción</th><th>Precio</th><th>Creado</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="tbody-productos"></tbody>
+          </table>
+          <div class="empty-state" id="empty-productos" style="display:none">
+            <div class="empty-icon">◫</div><p>Sin registros aún.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="view-unidades">
+      <div class="section-header">
+        <div class="section-title"><span>Catálogo /</span>Unidades de Medida</div>
+        <span class="count-badge" id="badge-unidades">0 registros</span>
+      </div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header">Nueva Unidad</div>
+        <div class="form-grid cols-2">
+          <div class="field">
+            <label>Nombre *</label>
+            <input type="text" id="u-nombre" placeholder="Ej. Kilogramo" />
+          </div>
+          <div class="field">
+            <label>Abreviatura</label>
+            <input type="text" id="u-abreviatura" placeholder="Ej. kg" />
+          </div>
+        </div>
+        <div style="padding:0 20px 20px;display:flex;gap:10px">
+          <button class="btn btn-primary" onclick="saveUnidad()">＋ Guardar</button>
+          <button class="btn btn-ghost" onclick="clearForm('u')">Limpiar</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">Registros</div>
+        <div class="table-wrap">
+          <div class="loading" id="loading-unidades">CARGANDO...</div>
+          <table id="table-unidades" style="display:none">
+            <thead><tr>
+              <th>#</th><th>Nombre</th><th>Abreviatura</th><th>Creado</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="tbody-unidades"></tbody>
+          </table>
+          <div class="empty-state" id="empty-unidades" style="display:none">
+            <div class="empty-icon">◱</div><p>Sin registros aún.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="view-entradas">
+      <div class="section-header">
+        <div class="section-title"><span>Documentos /</span>Entradas</div>
+      </div>
+      <div class="coming-soon">
+        <div class="cs-icon">↓</div>
+        <h3>Módulo de Entradas</h3>
+        <p>Interfaz disponible</p>
+      </div>
+    </div>
+
+    <div class="view" id="view-salidas">
+      <div class="section-header">
+        <div class="section-title"><span>Documentos /</span>Salidas</div>
+      </div>
+      <div class="coming-soon">
+        <div class="cs-icon">↑</div>
+        <h3>Módulo de Salidas</h3>
+        <p>Interfaz disponible</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  
+  const BASE = '/api';
+  let editingId = {};
+
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('topbarDate').textContent =
+      now.toLocaleDateString('es-MX', { weekday:'short', day:'2-digit', month:'short' }) +
+      '  ' + now.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' });
+  }
+  updateClock();
+  setInterval(updateClock, 30000);
+
+  const titles = {
+    home: 'Dashboard', conceptos: 'Conceptos', destinos: 'Destinos',
+    productos: 'Productos', unidades: 'Unidades de Medida',
+    entradas: 'Entradas', salidas: 'Salidas'
+  };
+  function navigate(view) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('view-' + view).classList.add('active');
+    document.querySelector(`[data-view="${view}"]`).classList.add('active');
+    document.getElementById('topbarTitle').textContent = titles[view] || view;
+    if (['conceptos','destinos','productos','unidades'].includes(view)) loadList(view);
+    if (view === 'home') loadDashStats();
+  }
+
+  function toast(msg, type = 'ok') {
+    const el = document.createElement('div');
+    el.className = 'toast-item' + (type === 'error' ? ' error' : '');
+    el.textContent = msg;
+    document.getElementById('toast').appendChild(el);
+    setTimeout(() => el.remove(), 3500);
+  }
+
+  async function api(method, path, body) {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(BASE + path, opts);
+    return res.json();
+  }
+
+  async function checkConnection() {
+    try {
+      await api('GET', '/ping');
+      document.getElementById('statusDot').className = 'status-dot';
+      document.getElementById('statusText').textContent = 'DB Conectada';
+    } catch {
+      document.getElementById('statusDot').className = 'status-dot offline';
+      document.getElementById('statusText').textContent = 'Sin conexión';
+    }
+  }
+  checkConnection();
+
+  function fmtDate(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' });
+  }
+
+  async function loadList(catalog) {
+    const loading = document.getElementById('loading-' + catalog);
+    const table   = document.getElementById('table-' + catalog);
+    const empty   = document.getElementById('empty-' + catalog);
+    const tbody   = document.getElementById('tbody-' + catalog);
+    const badge   = document.getElementById('badge-' + catalog);
+
+    loading.style.display = 'block';
+    table.style.display   = 'none';
+    empty.style.display   = 'none';
+
+    try {
+      const rows = await api('GET', '/' + catalog);
+      loading.style.display = 'none';
+      badge.textContent = rows.length + ' registro' + (rows.length !== 1 ? 's' : '');
+
+      if (!rows.length) { empty.style.display = 'block'; return; }
+      table.style.display = '';
+      tbody.innerHTML = rows.map(r => renderRow(catalog, r)).join('');
+    } catch (e) {
+      loading.textContent = 'Error al cargar datos.';
+      toast('Error al cargar ' + catalog, 'error');
+    }
+  }
+
+  function renderRow(catalog, r) {
+    let cells = `<td class="id-cell">${r.id}</td>`;
+    if (catalog === 'conceptos')
+      cells += `<td>${r.nombre}</td><td>${r.descripcion || '—'}</td><td>${fmtDate(r.creado_en)}</td>`;
+    else if (catalog === 'destinos')
+      cells += `<td>${r.nombre}</td><td>${r.ciudad || '—'}</td><td>${r.estado || '—'}</td><td>${fmtDate(r.creado_en)}</td>`;
+    else if (catalog === 'productos')
+      cells += `<td>${r.nombre}</td><td>${r.descripcion || '—'}</td><td>$${parseFloat(r.precio||0).toFixed(2)}</td><td>${fmtDate(r.creado_en)}</td>`;
+    else if (catalog === 'unidades')
+      cells += `<td>${r.nombre}</td><td><code style="font-family:var(--font-mono);font-size:12px;background:var(--surface2);padding:2px 7px;border-radius:4px">${r.abreviatura || '—'}</code></td><td>${fmtDate(r.creado_en)}</td>`;
+
+    cells += `<td><div class="actions-cell">
+      <button class="btn btn-danger" onclick="deleteRecord('${catalog}',${r.id})">✕ Eliminar</button>
+    </div></td>`;
+    return `<tr>${cells}</tr>`;
+  }
+
+  async function loadDashStats() {
+    const catalogs = ['conceptos','destinos','productos','unidades'];
+    for (const c of catalogs) {
+      try {
+        const rows = await api('GET', '/' + c);
+        document.getElementById('cnt-' + c).textContent = rows.length;
+      } catch { document.getElementById('cnt-' + c).textContent = '!'; }
+    }
+  }
+
+  async function deleteRecord(catalog, id) {
+    if (!confirm('¿Eliminar este registro?')) return;
+    try {
+      await api('DELETE', `/${catalog}/${id}`);
+      toast('Registro eliminado');
+      loadList(catalog);
+    } catch { toast('Error al eliminar', 'error'); }
+  }
+
+  async function saveConcepto() {
+    const nombre = document.getElementById('c-nombre').value.trim();
+    if (!nombre) { toast('El nombre es requerido', 'error'); return; }
+    try {
+      await api('POST', '/conceptos', {
+        nombre,
+        descripcion: document.getElementById('c-descripcion').value.trim()
+      });
+      toast('Concepto guardado ✓');
+      clearForm('c');
+      loadList('conceptos');
+    } catch { toast('Error al guardar', 'error'); }
+  }
+
+  async function saveDestino() {
+    const nombre = document.getElementById('d-nombre').value.trim();
+    if (!nombre) { toast('El nombre es requerido', 'error'); return; }
+    try {
+      await api('POST', '/destinos', {
+        nombre,
+        ciudad: document.getElementById('d-ciudad').value.trim(),
+        estado: document.getElementById('d-estado').value.trim()
+      });
+      toast('Destino guardado ✓');
+      clearForm('d');
+      loadList('destinos');
+    } catch { toast('Error al guardar', 'error'); }
+  }
+
+  async function saveProducto() {
+    const nombre = document.getElementById('p-nombre').value.trim();
+    if (!nombre) { toast('El nombre es requerido', 'error'); return; }
+    try {
+      await api('POST', '/productos', {
+        nombre,
+        descripcion: document.getElementById('p-descripcion').value.trim(),
+        precio: parseFloat(document.getElementById('p-precio').value) || 0
+      });
+      toast('Producto guardado ✓');
+      clearForm('p');
+      loadList('productos');
+    } catch { toast('Error al guardar', 'error'); }
+  }
+
+  async function saveUnidad() {
+    const nombre = document.getElementById('u-nombre').value.trim();
+    if (!nombre) { toast('El nombre es requerido', 'error'); return; }
+    try {
+      await api('POST', '/unidades', {
+        nombre,
+        abreviatura: document.getElementById('u-abreviatura').value.trim()
+      });
+      toast('Unidad guardada ✓');
+      clearForm('u');
+      loadList('unidades');
+    } catch { toast('Error al guardar', 'error'); }
+  }
+
+  function clearForm(prefix) {
+    document.querySelectorAll(`[id^="${prefix}-"]`).forEach(el => el.value = '');
+  }
+
+  loadDashStats();
+</script>
+</body>
+</html>
